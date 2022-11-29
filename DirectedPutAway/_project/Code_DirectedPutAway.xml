@@ -1,0 +1,80 @@
+﻿<Graph ClassName="DirectedPutAway" Source="#CDATA" IsNew="True" FileType="NewFile">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using PX.BarcodeProcessing;
+using PX.Data;
+using PX.Objects.IN;
+using PX.Objects.IN.WMS;
+using PX.Objects.PO.WMS;
+using PX.Objects.SO.WMS;
+
+namespace PX.Objects
+{
+    public class ReceivePutAway_Customized_Host : ReceivePutAway.Host
+    {
+    }
+
+    // Acuminator disable once PX1016 ExtensionDoesNotDeclareIsActiveMethod extension should be constantly active
+    public class ReceivePutAway_Customized_Implementation : ReceivePutAway.ScanExtension
+    {
+        // this is here to allow our extension to trigger only for custom screen and not the base one
+        public static bool IsActiveForGraph<TGraph>()
+            where TGraph : PXGraph
+        {
+            return typeof(TGraph) == typeof(ReceivePutAway_Customized_Host);
+
+        }
+        [PXOverride]
+        public virtual ScanState<ReceivePutAway> DecorateScanState(
+            ScanState<ReceivePutAway> original,
+            Func<ScanState<ReceivePutAway>, ScanState<ReceivePutAway>> base_DecorateScanState)
+        {
+            var state = base_DecorateScanState(original);
+
+            if (state is ReceivePutAway.InventoryItemState itemState && itemState.ModeCode == ReceivePutAway.ReceiveMode.Value)
+            {
+                itemState
+                    /// We can replace or append logic to Validate,Apply,ReportSuccess, etc.
+                    .Intercept.Apply.ByAppend((basis, item) =>
+                    {
+                        // InventoryItemState actually works with PXResult<INItemXRef, InventoryItem>, not the InventoryItem itself
+                        INItemXRef xref = item;
+                        InventoryItem inventory = item;
+                        // Put custom logic here
+
+                    });
+            }
+
+            return state;
+        }
+    }
+
+    // Acuminator disable once PX1016 ExtensionDoesNotDeclareIsActiveMethod extension should be constantly active
+
+    public class AlterReceiveModeConfirmLogic : ReceivePutAway.ScanExtension<ReceivePutAway.ReceiveMode.ConfirmState.Logic>
+    {
+        // this is here to allow our extension to trigger only for custom screen and not the base one
+        public static bool IsActiveForGraph<TGraph>()
+            where TGraph : PXGraph
+        {
+            return typeof(TGraph) == typeof(ReceivePutAway_Customized_Host);
+
+        }
+        [PXOverride]
+        public virtual FlowStatus ProcessAdd(Func<FlowStatus> baseMethod)
+        {
+            var flowStatus = baseMethod();
+            //put custom logic here
+
+            return flowStatus.WithPrompt("Put it right there");
+        }
+    }
+
+}
+
+]]></CDATA>
+</Graph>
